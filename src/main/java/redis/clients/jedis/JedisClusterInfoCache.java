@@ -1,22 +1,18 @@
 package redis.clients.jedis;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import redis.clients.jedis.exceptions.JedisConnectionException;
+import redis.clients.jedis.exceptions.JedisException;
+import redis.clients.util.SafeEncoder;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSocketFactory;
-
-import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
-
-import redis.clients.jedis.exceptions.JedisConnectionException;
-import redis.clients.jedis.exceptions.JedisException;
-import redis.clients.util.SafeEncoder;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class JedisClusterInfoCache {
   private final Map<String, JedisPool> nodes = new HashMap<String, JedisPool>();
@@ -283,11 +279,12 @@ public class JedisClusterInfoCache {
   }
 
   public static String getNodeKey(HostAndPort hnp) {
-    return hnp.getHost() + ":" + hnp.getPort();
+
+    return convertToIp(hnp.getHost()) + ":" + hnp.getPort();
   }
 
   public static String getNodeKey(Client client) {
-    return client.getHost() + ":" + client.getPort();
+    return convertToIp(client.getHost()) + ":" + client.getPort();
   }
 
   public static String getNodeKey(Jedis jedis) {
@@ -301,5 +298,16 @@ public class JedisClusterInfoCache {
       slotNums.add(slot);
     }
     return slotNums;
+  }
+
+  private static String convertToIp(String host){
+    InetAddress inetAddress = null;
+    try {
+      inetAddress = InetAddress.getByName(host);
+      return inetAddress.getHostAddress();
+    } catch (UnknownHostException e) {
+      // ignore, since host has already been verified, here is never returned actually.
+      return null;
+    }
   }
 }
